@@ -4,6 +4,9 @@ install:
 	cp -r ./bin /usr/local
 
 all: amath database test regression types
+	if [ ! -d bin ]; then mkdir bin; fi
+	if [ ! -d lib ]; then mkdir lib; fi
+	if [ ! -d testing ]; then mkdir testing; fi
 	cd src/amath; make exe;
 	cd src/database; make exe;
 	cd src/regression; make exe;
