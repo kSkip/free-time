@@ -1,0 +1,10 @@
+set term svg;
+set output outputfile;
+set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'white' fillstyle solid noborder
+
+set style fill solid border 0;
+
+binwidth=0.12;
+bin(x,width)=width*floor(x/width);
+
+plot datafile using (bin($2,binwidth)):(1) smooth freq with boxes title 'residuals';

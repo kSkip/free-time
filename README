@@ -1,0 +1,3 @@
+#free-time
+
+free-time is a suite of time series analysis software provided as a collection of command line executables. Thus, they are easily used with a unix-like shell environment. The scripts provided for various calculations are written as Korn shell scripts. The Korn shell supports floating point arithmatic, which is why I chose it. However, any shell or interpreter is suitable (e.g. Bash, Python, etc.). Furthermore, executables for querying and storing data obtained from Yahoo! Finance are available. The schemas are fixed and the classes that interface with the database support only MySQL for now. Database and configuration scripts are written as Bourne shell scripts for compatiblity.

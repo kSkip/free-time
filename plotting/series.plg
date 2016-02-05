@@ -1,0 +1,7 @@
+set term x11 title ticker;
+set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'white' fillstyle solid noborder
+set style line 1 lw 3 lc rgb 'orange';
+set datafile sep ' ';
+set xdata time;
+set timefmt '%Y-%m-%d';
+plot data using 1:2 with lines ls 1 title value;

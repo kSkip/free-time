@@ -1,0 +1,6 @@
+set term svg;
+set output outputfile;
+set object rectangle from screen 0,0 to screen 1,1 behind fillcolor rgb 'white' fillstyle solid noborder
+set xrange [-0.5:*];
+set style fill solid border 0; set boxwidth 1.0;
+plot function with boxes title 'correlation', fit with lines lw 3 title 'fit';
