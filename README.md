@@ -31,4 +31,4 @@ Skip this step and jump to the glossary if you are using a previous configured d
 
 Now, it's time to obtain the historical stock market data from Yahoo! Finance. Open the script BuildDatabase.sh and set the variable BEGINDATE to the earliest date you wish to retrieve data. The default is Jan. 1st 1970. Then run BuildDatabase.sh. This can take hours depending on how far back you set BEGINDATE.  
 
-Once this is finsih you will have a database with a table populated will the date, ticker, exchange, open, high, low, close, volume, and adjusted close price of every stock in the NYSE and the NASDAQ.
+Once this is finished you will have a database with a table populated will the date, ticker, exchange, open, high, low, close, volume, and adjusted close price of every stock in the NYSE and the NASDAQ.
