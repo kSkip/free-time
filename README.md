@@ -11,6 +11,7 @@ The following libraries need to be installed on the system:
   * LAPACKE (for the C interface)
   * cURL-dev
   * mysqlclient-dev
+ 
 The following programs need to be installed for the provided scripts:
   * gnuplot
   * mysql (client)
