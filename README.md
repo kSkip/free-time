@@ -65,10 +65,10 @@ enddate(optional): the ending date for the obtained data set. If none then the c
 -l: pull low price  
 -c: pull close price  
 -v: pull volume  
--a: pull adjusted close price
--f: print to a file
--m: MySQL Database
--s: SQLite3 Database (Not Yet Supported)
+-a: pull adjusted close price  
+-f: print to a file  
+-m: MySQL Database  
+-s: SQLite3 Database (Not Yet Supported)  
 
 **arimafit:**  Fit an autoregressive-integrated-moving-average (ARIMA) model to time series data provided by a file or stdin.  
 
