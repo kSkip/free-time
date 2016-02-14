@@ -20,6 +20,32 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 #include <stdio.h>
 
+void get_coefficients(double* b,
+                      unsigned int p, double* psi,
+                      unsigned int q, double* theta,
+                      double* c, double series_mean);
+
+void get_coefficients(double* b,
+                      unsigned int p, double* psi,
+                      unsigned int q, double* theta,
+                      double* c, double series_mean)
+{
+
+	/*autoregressive coefficients*/
+	double factor = 1;
+	for(i=0;i<p;i++){
+		psi[i] = b[i];
+		factor -= psi[i];
+	}
+
+	/*model constant*/
+	*c = series_mean*factor;
+
+	/*moving average coefficients*/
+	for(i=0;i<q;i++) theta[i] = b[i+p];
+
+}
+
 void ar_yule_walker(double* series, unsigned int size, double* c, double* psi, unsigned int p, double* residuals){
 
 	int i, j;
@@ -53,12 +79,7 @@ void ar_yule_walker(double* series, unsigned int size, double* c, double* psi, u
 	LAPACKE_dgesv(LAPACK_ROW_MAJOR, p, 1, A, p, ipiv, b, 1);
 
 	/*obtain the model coefficients*/
-	double factor = 1;
-	for(i=0;i<(int)p;i++){
-		psi[i] = b[i];
-		factor -= psi[i];
-	}
-	*c = series_mean*factor;
+	get_coefficients(b,p,psi,q,theta,series_mean);
 
 	for(i=0;i<(int)size;i++){
 
@@ -164,41 +185,46 @@ void arma_long_ar(double* series,
 	A = (double*)malloc(rows*cols*sizeof(double));
 	b = (double*)malloc(rows*sizeof(double));
 
-	/*construct the linear system*/
-	for(i=0;i<rows;i++){
+	double innovations_correction = 0;
+	while(innovations_correction > 0.0001f){
 
-		b[i] = series[i] - series_mean;
+		/*construct the linear system*/
+		for(i=0;i<rows;i++){
 
-		for(j=0;j<p;j++) A[cols*i+j] = series[i+j+1] - series_mean;
+			b[i] = series[i] - series_mean;
 
-		for(j=0;j<q;j++) A[cols*i+j+p] = innovations[i+j+1];
+			for(j=0;j<p;j++) A[cols*i+j] = series[i+j+1] - series_mean;
 
-	}
+			for(j=0;j<q;j++) A[cols*i+j+p] = innovations[i+j+1];
 
-	/*call the least squares solver*/
-	LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', rows, cols, 1, A, cols, b, 1);
+		}
 
-	/*obtain the model coefficients*/
-	double factor = 1;
-	for(i=0;i<p;i++){
-		psi[i] = b[i];
-		factor -= psi[i];
-	}
-	*constant = series_mean*factor;
+		/*call the least squares solver*/
+		LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', rows, cols, 1, A, cols, b, 1);
 
-	for(i=0;i<q;i++) theta[i] = b[i+p];
+		/*obtain the model coefficients*/
+		double factor = 1;
+		for(i=0;i<p;i++){
+			psi[i] = b[i];
+			factor -= psi[i];
+		}
+		*constant = series_mean*factor;
 
-	memcpy(residuals,series,size*sizeof(double));
+		for(i=0;i<q;i++) theta[i] = b[i+p];
 
-	for(i=0;i<size;i++){
+		memcpy(residuals,series,size*sizeof(double));
 
-		for(j=0;j<p;j++) residuals[i] -= psi[j]*series[(i+j+1)%size];
+		for(i=0;i<size;i++){
 
-		for(j=0;j<q;j++) residuals[i] -= theta[j]*innovations[(i+j+1)%size];
+			for(j=0;j<p;j++) residuals[i] -= psi[j]*series[(i+j+1)%size];
 
-		residuals[i] -= *constant;
+			for(j=0;j<q;j++) residuals[i] -= theta[j]*innovations[(i+j+1)%size];
 
-	}
+			residuals[i] -= *constant;
+
+		}
+
+	}/*acheived self-consistency*/
 
 	free(A);
 	free(b);
