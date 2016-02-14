@@ -72,7 +72,7 @@ enddate(optional): the ending date for the obtained data set. If none then the c
 
 **arimafit:**  Fit an autoregressive-integrated-moving-average (ARIMA) model to time series data provided by a file or stdin.  
 
-*Usage:* arimafit [ -xsct ] [ -p | -d data_file ] [ -o output_file ] num_ar_lags num_ma_lags num_differencing  
+*Usage:* arimafit [ -xst ] [ -p | -d data_file ] [ -o output_file ] num_ar_lags num_ma_lags num_differencing  
 
 *Arguments:*  
 num_ar_lags: the number of autoregressive lags to include in the model  
@@ -82,7 +82,6 @@ num_differencing: the number of times to difference the data before fitting (a.k
 *Options:*  
 -x: optimixe the model by determining the model parameters  
 -s: suppress to output of the residuals  
--c: include a constant term in the model  
 -t: include a deterministic trend term to the model  
 -p: read data from pipe (i.e. stdin)  
 -d: read data from file  

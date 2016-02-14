@@ -91,7 +91,7 @@ int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsign
 
 		var = variance(residuals,size,mean(residuals,size));
 
-	}else if(p >= 0 && d == 0 && q >= 0){
+	}else if(p >= 0 && d == 0 && q > 0){
 
 		arma_long_ar(series,size,&c,&(psi[0]),p,&(theta[0]),q,residuals);
 
@@ -109,27 +109,22 @@ int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsign
 
 		delete[] differenced;
 
-	}/*else if(p >= 0 && d > 0 && q >= 0){
-
-		unsigned short fit_opt = 0;
-		if( opt & ARIMAMODEL_FIT_CONST ) fit_opt |= ARMA_FIT_CONST;
-		if( opt & ARIMAMODEL_FIT_TREND ) fit_opt |= ARMA_FIT_CONST_TREND;
+	}else if(p >= 0 && d > 0 && q > 0){
 		
 		double* differenced = new double[size-d];
 
 		difference(series,size,d,differenced);
 
-		arma_long_ar(differenced,size-d,&c,&beta,&(psi[0]),p,&(theta[0]),q,residuals,fit_opt);
+		arma_long_ar(differenced,size-d,&c,&(psi[0]),p,&(theta[0]),q,residuals);
 
 		var = variance(residuals,size-d,0);
 
 		delete[] differenced;
 
-	}*/
+	}
 
-	unsigned int k = p + q;
-	if( opt & ARIMAMODEL_FIT_CONST ) k++;
-	if( opt & ARIMAMODEL_FIT_TREND ) k++;
+	unsigned int k = p + q + 1; /*ar, ma, & const paramters*/
+	if( opt & ARIMAMODEL_FIT_TREND ) k++; /*trend component*/
 	AIC = aic(size-d,k,(size-d-1)*var);
 
 	return 0;

@@ -20,7 +20,6 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <vector>
 #include "types/Matrix.hpp"
 
-#define ARIMAMODEL_FIT_CONST 0
 #define ARIMAMODEL_FIT_TREND 1
 
 struct ForecastParameters{

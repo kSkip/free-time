@@ -25,15 +25,24 @@ void get_coefficients(double* b,
                       unsigned int q, double* theta,
                       double* c, double series_mean);
 
+void get_residuals(double* residuals, unsigned int size,
+                   double* series, double* innovations,
+                   unsigned int p, double* psi,
+                   unsigned int q, double* theta, double* c);
+
+double mean_square_deviation(double* series_a, double* series_b, unsigned int size);
+
 void get_coefficients(double* b,
                       unsigned int p, double* psi,
                       unsigned int q, double* theta,
                       double* c, double series_mean)
 {
 
-	/*autoregressive coefficients*/
+	unsigned int i;
 	double factor = 1;
-	for(i=0;i<p;i++){
+
+	/*autoregressive coefficients*/
+	for(i=0;i<p;++i){
 		psi[i] = b[i];
 		factor -= psi[i];
 	}
@@ -42,7 +51,47 @@ void get_coefficients(double* b,
 	*c = series_mean*factor;
 
 	/*moving average coefficients*/
-	for(i=0;i<q;i++) theta[i] = b[i+p];
+	for(i=0;i<q;++i) theta[i] = b[i+p];
+
+}
+
+void get_residuals(double* residuals, unsigned int size,
+                   double* series, double* innovations,
+                   unsigned int p, double* psi,
+                   unsigned int q, double* theta, double* c)
+{
+
+	unsigned int i, j;
+
+	memcpy(residuals,series,size*sizeof(double));
+
+	for(i=0;i<size;++i){
+
+		/*using cyclic boundaries here*/
+
+		for(j=0;j<p;++j) residuals[i] -= psi[j]*series[(i+j+1)%size];
+
+		for(j=0;j<q;++j) residuals[i] -= theta[j]*innovations[(i+j+1)%size];
+
+		residuals[i] -= *c;
+
+	}
+
+}
+
+double mean_square_deviation(double* series_a, double* series_b, unsigned int size){
+
+	unsigned int i;
+	double msd = 0;
+
+	for(i=0;i<size;++i){
+
+		double square = series_a[i] - series_b[i];
+		msd += square*square;
+
+	}
+
+	return msd /= size;
 
 }
 
@@ -79,16 +128,10 @@ void ar_yule_walker(double* series, unsigned int size, double* c, double* psi, u
 	LAPACKE_dgesv(LAPACK_ROW_MAJOR, p, 1, A, p, ipiv, b, 1);
 
 	/*obtain the model coefficients*/
-	get_coefficients(b,p,psi,q,theta,series_mean);
+	get_coefficients(b,p,psi,0,NULL,c,series_mean);
 
-	for(i=0;i<(int)size;i++){
-
-		residuals[i] = series[i] - *c;
-
-		/*using cyclic boundaries here*/
-		for(j=0;j<(int)p;j++) residuals[i] -= psi[j]*series[(i+j+1)%size];
-
-	}
+	/*obtain the residuals*/
+	get_residuals(residuals,size,series,NULL,p,psi,0,NULL,c);
 
 	free(A);
 	free(b);
@@ -125,34 +168,20 @@ void ar_ols(double* series, unsigned int size, double* c, double* psi, unsigned 
 	LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', rows, cols, 1, A, cols, b, 1);
 
 	/*obtain the model coefficients*/
-	double factor = 1;
-	for(i=0;i<p;i++){
-		psi[i] = b[i];
-		factor -= psi[i];
-	}
-	*c = series_mean*factor;
+	get_coefficients(b,p,psi,0,NULL,c,series_mean);
 
-	for(i=0;i<size;i++){
-
-		residuals[i] = series[i] - *c;
-
-		/*using cyclic boundaries here*/
-		for(j=0;j<p;j++) residuals[i] -= psi[j]*series[(i+j+1)%size];
-
-	}
+	/*obtain the residuals*/
+	get_residuals(residuals,size,series,NULL,p,psi,0,NULL,c);
 
 	free(A);
 	free(b);
 
 }
 
-void arma_long_ar(double* series,
-                  unsigned int size,
+void arma_long_ar(double* series, unsigned int size,
                   double* constant,
-                  double* psi,
-                  unsigned int p,
-                  double* theta,
-                  unsigned int q,
+                  double* psi, unsigned int p,
+                  double* theta, unsigned int q,
                   double* residuals)
 {
 
@@ -163,7 +192,7 @@ void arma_long_ar(double* series,
 
 	if(p > size || q > size) return;
 
-	double* innovations = (double*)malloc(size*sizeof(double));
+	double* innovations = (double*)malloc(size*sizeof(double));;
 	
 	unsigned int p_large;
 	if(size > 180) p_large = 90;
@@ -172,7 +201,7 @@ void arma_long_ar(double* series,
 	/*fit a long ar model to the series*/
 	double* long_ar_psi = (double*)malloc(p_large*sizeof(double));
 	double c;
-	ar_ols(series,size,&c,long_ar_psi,p_large,innovations);
+	ar_ols(series,size,&c,long_ar_psi,p_large,residuals);
 	free(long_ar_psi);
 	/*"innovations" contains the sample we will use for the error terms*/
 
@@ -185,8 +214,13 @@ void arma_long_ar(double* series,
 	A = (double*)malloc(rows*cols*sizeof(double));
 	b = (double*)malloc(rows*sizeof(double));
 
-	double innovations_correction = 0;
-	while(innovations_correction > 0.0001f){
+	double msd = 10; /*initialize to some srbitarily large value*/
+	unsigned int count = 0;
+
+	while(msd > 0.001f && count++ < 100){
+		
+		/*use the residuals as next round of innovations*/
+		memcpy(innovations,residuals,size*sizeof(double));
 
 		/*construct the linear system*/
 		for(i=0;i<rows;i++){
@@ -203,32 +237,19 @@ void arma_long_ar(double* series,
 		LAPACKE_dgels(LAPACK_ROW_MAJOR, 'N', rows, cols, 1, A, cols, b, 1);
 
 		/*obtain the model coefficients*/
-		double factor = 1;
-		for(i=0;i<p;i++){
-			psi[i] = b[i];
-			factor -= psi[i];
-		}
-		*constant = series_mean*factor;
+		get_coefficients(b,p,psi,q,theta,constant,series_mean);
 
-		for(i=0;i<q;i++) theta[i] = b[i+p];
+		/*obtain the residuals*/
+		get_residuals(residuals,size,series,innovations,p,psi,q,theta,constant);
 
-		memcpy(residuals,series,size*sizeof(double));
-
-		for(i=0;i<size;i++){
-
-			for(j=0;j<p;j++) residuals[i] -= psi[j]*series[(i+j+1)%size];
-
-			for(j=0;j<q;j++) residuals[i] -= theta[j]*innovations[(i+j+1)%size];
-
-			residuals[i] -= *constant;
-
-		}
+		msd = mean_square_deviation(residuals,innovations,size);
 
 	}/*acheived self-consistency*/
 
+	free(innovations);
+
 	free(A);
 	free(b);
-	free(innovations);
 
 }
 

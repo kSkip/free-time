@@ -55,9 +55,6 @@ int main(int argc, char* argv[]){
 			case 's':
 				opt |= FIT_OPT_SUPPRESS;
 				break;
-			case 'c':
-				fit_opt |= ARIMAMODEL_FIT_CONST;
-				break;
 			case 't':
 				fit_opt |= ARIMAMODEL_FIT_TREND;
 				break;
@@ -149,7 +146,7 @@ int main(int argc, char* argv[]){
 	if(opt & FIT_OPT_OPTIMIZE){
 		for(p=0;p<=arLags;p++){
 			for(q=0;q<=maLags;q++){
- 				models.push_back(ARIMAModel(p,differencing,q));
+ 				if((p+q)>0) models.push_back(ARIMAModel(p,differencing,q));
 			}
 		}
 	}else{
@@ -203,6 +200,6 @@ int main(int argc, char* argv[]){
 void printUsage(char* exe){
 
 	std::cerr << "Usage: " << exe;
-	std::cerr << " [ -xsct ] [ -p | -d data_file ] [ -o output_file ] num_ar_lags num_ma_lags num_differencing\n";
+	std::cerr << " [ -xst ] [ -p | -d data_file ] [ -o output_file ] num_ar_lags num_ma_lags num_differencing\n";
 
 }
