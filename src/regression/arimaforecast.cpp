@@ -141,16 +141,23 @@ int main(int argc, char* argv[]){
 	std::vector<double> data;
 	std::vector<double> innovations;
 	bool needRes = bool(s.q > 0);
+
 	while(getline(input,value,'\n')){
+
 		if(needRes){
+
 			std::string::size_type pos = value.find(' ');
 			if(value.npos != pos){
+
 				data.push_back(atof((value.substr(0,pos)).c_str()));
 				innovations.push_back(atof((value.substr(pos+1)).c_str()));
-			}	
+
+			}
+
 		}else{
 			data.push_back(atof(value.c_str()));
 		}
+
 	}
 
 	struct ForecastParameters params;
@@ -158,15 +165,12 @@ int main(int argc, char* argv[]){
 	params.trials = trials;
 	model.setForecastParams(&params);
 
-	if(innovations.size() > 0){
-		model.forecast(&(data[0]),data.size(),&(innovations[0]),initial_time);
-	}else{
-		model.forecast(&(data[0]),data.size(),NULL,initial_time);
-	}
+	if(innovations.size() > 0) model.forecast(&(data[0]),data.size(),&(innovations[0]),initial_time);
+	else                       model.forecast(&(data[0]),data.size(),NULL,initial_time);
 
 	double* expectation = new double[projection];
-	double* upper = new double[projection];
-	double* lower = new double[projection];
+	double* upper       = new double[projection];
+	double* lower       = new double[projection];
 
 	model.getForecast(expectation,upper,lower);
 
@@ -175,13 +179,13 @@ int main(int argc, char* argv[]){
 	unsigned int i;
 
 	for(i=0;i<projection;i++){
+
 		std::stringstream line;
 		line << lower[i] << " " << expectation[i] << " " << upper[i] << "\n";
-		if(opt & OPT_FILEOUT){
-			ofs << line.rdbuf();
-		}else{
-			std::cout << line.rdbuf();
-		}
+
+		if(opt & OPT_FILEOUT) ofs << line.rdbuf();
+		else                  std::cout << line.rdbuf();
+
 	}
 
 	if(opt & OPT_FILEOUT) ofs.close();

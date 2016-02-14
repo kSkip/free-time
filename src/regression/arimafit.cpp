@@ -47,18 +47,18 @@ int main(int argc, char* argv[]){
 	unsigned int p, q, i;
 	unsigned short fit_opt = 0;
 
-	while ((c = getopt (argc, argv, "xsctpd:o:")) != -1){
+	while ((c = getopt (argc, argv, "xstpd:o:")) != -1){
 		switch(c){
-			case 'x':
+			case 'x': /*fit the optimal number of AR & MA lags by criterion*/
 				opt |= FIT_OPT_OPTIMIZE;
 				break;
-			case 's':
+			case 's': /*suppress output of data and residuals*/
 				opt |= FIT_OPT_SUPPRESS;
 				break;
-			case 't':
+			case 't': /*fit and substract a deterministic trend*/
 				fit_opt |= ARIMAMODEL_FIT_TREND;
 				break;
-			case 'p':
+			case 'p': /*take data from pipe*/
 				if(!(opt & FIT_OPT_FILEIN)){ 
 					opt |= FIT_OPT_PIPE;
 				}else{
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]){
 					return 1;
 				}
 				break;
-			case 'd':
+			case 'd': /*take data from file*/
 				index = optind-1;
 				str = argv[index];
 				index++;
@@ -79,7 +79,7 @@ int main(int argc, char* argv[]){
 				}
 				optind = index;
 				break;
-			case 'o':
+			case 'o': /*send ouput to file*/
 				index = optind-1;
 				str = argv[index];
 				index++;
@@ -95,7 +95,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 	index = optind;
-	if(index < argc){
+	if(index < argc){ /*AR lags*/
         	str = argv[index];
         	index++;
         	arLags = atoi(str);
@@ -103,7 +103,7 @@ int main(int argc, char* argv[]){
 		printUsage(argv[0]);
 		return 1;
 	}
-	if(index < argc){
+	if(index < argc){ /*MA lags*/
         	str = argv[index];
         	index++;
         	maLags = atoi(str);
@@ -111,7 +111,7 @@ int main(int argc, char* argv[]){
 		printUsage(argv[0]);
 		return 1;
 	}
-	if(index < argc){
+	if(index < argc){ /*differencing*/
         	str = argv[index];
         	index++;
         	differencing = atoi(str);
@@ -120,6 +120,7 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
+	//read input
 	if(opt & FIT_OPT_PIPE){
 		char byte;
 		while(std::cin.get(byte)){
@@ -137,11 +138,13 @@ int main(int argc, char* argv[]){
 		return 1;
 	}
 
+	//construct series from input
 	std::vector<double> data;
 	while(getline(input,value,'\n')){
 		data.push_back(atof(value.c_str()));
 	}
 
+	//create model or models
 	std::vector<ARIMAModel> models;
 	if(opt & FIT_OPT_OPTIMIZE){
 		for(p=0;p<=arLags;p++){
@@ -177,24 +180,24 @@ int main(int argc, char* argv[]){
 	models[bestModel].getModelSpec(&s);
 
 
-	if(opt & FIT_OPT_FILEOUT){
-		s.save(outfile.c_str());
-	}else{
-		s.print();
-	}
+	if(opt & FIT_OPT_FILEOUT) s.save(outfile.c_str());
+	else                      s.print();
 
 	if(!(opt & FIT_OPT_SUPPRESS)){
-	for(i=0;i<data.size();i++){
 
-		std::cout << data[i] << " " << res[i] << "\n";
+		for(i=0;i<data.size();i++){
 
-	}
+			std::cout << data[i] << " " << res[i] << "\n";
+
+		}
+
 	}
 
 	delete[] res;
 	delete[] current_res;
 
 	return 0;
+
 }
 
 void printUsage(char* exe){

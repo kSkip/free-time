@@ -24,6 +24,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include "amath/amath.h"
 
 ARIMAModel::ARIMAModel(){
+
 	p = 0;
 	q = 0;
 	d = 0;
@@ -33,6 +34,7 @@ ARIMAModel::ARIMAModel(){
 	c = 0;
 	beta = 0;
 	var = 0;
+
 }
 
 ARIMAModel::ARIMAModel(unsigned int p_in, unsigned int d_in, unsigned int q_in){
@@ -137,14 +139,13 @@ void ARIMAModel::getModelSpec(struct ModelSpec* specs){
 	specs->p = p;
 	specs->d = d;
 	specs->q = q;
+
 	specs->psi.resize(p);
-	for(i=0;i<p;i++){
-		specs->psi[i] = psi[i];
-	}
+	for(i=0;i<p;i++) specs->psi[i] = psi[i];
+
 	specs->theta.resize(q);
-	for(i=0;i<q;i++){
-		specs->theta[i] = theta[i];
-	}
+	for(i=0;i<q;i++) specs->theta[i] = theta[i];
+
 	specs->c = c;
 	specs->beta = beta;
 	specs->var = var;
@@ -159,14 +160,10 @@ void ARIMAModel::setModelSpec(ModelSpec* specs){
 	q = specs->q;
 
 	psi.resize(p);
-	for(i=0;i<p;i++){
-		psi[i] = specs->psi[i];
-	}
+	for(i=0;i<p;i++) psi[i] = specs->psi[i];
 
 	theta.resize(q);
-	for(i=0;i<q;i++){
-		theta[i] = specs->theta[i];
-	}
+	for(i=0;i<q;i++) theta[i] = specs->theta[i];
 
 	c = specs->c;
 	beta = specs->beta;
@@ -225,7 +222,7 @@ int ARIMAModel::forecast(double* series, unsigned int size, double* innovations,
 				value += theta[k]*pre_sample_innovations[pre_sample_innovations.size()-k-1];
 			}
 			double e = noise(generator);
-			value += c + + beta*(initial_time + j + 1) + e;
+			value += c + beta*(initial_time + j + 1) + e;
 	
 			pre_sample_series.push_back(value);
 			pre_sample_innovations.push_back(e);

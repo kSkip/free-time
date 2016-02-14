@@ -95,7 +95,7 @@ num_differencing: the number of times to difference the data before fitting (a.k
 model_file: the file containing information about the model to use. This file is usually produced by *arimafit*.  
 projection: the number of steps in time to project  
 trials: the number of simulations to preform  
-initial_time: the time of the input time series to start sampling for forecasting  
+initial_time: the initial time value for deterministic trend term  
 
 *Options:*  
 -p: read the sampling time series from pipe  
