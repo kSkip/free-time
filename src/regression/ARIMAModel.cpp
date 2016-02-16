@@ -23,6 +23,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 #include "amath/amath.h"
 
+//default constructor
 ARIMAModel::ARIMAModel(){
 
 	p = 0;
@@ -37,6 +38,7 @@ ARIMAModel::ARIMAModel(){
 
 }
 
+//overloaded constructor
 ARIMAModel::ARIMAModel(unsigned int p_in, unsigned int d_in, unsigned int q_in){
 
 	p = p_in;
@@ -56,6 +58,7 @@ ARIMAModel::ARIMAModel(unsigned int p_in, unsigned int d_in, unsigned int q_in){
 
 }
 
+//default copy constructor
 ARIMAModel::ARIMAModel(const ARIMAModel & rhs){
 
 	p = rhs.p;
@@ -77,6 +80,7 @@ ARIMAModel::ARIMAModel(const ARIMAModel & rhs){
 
 }
 
+//default destructor
 ARIMAModel::~ARIMAModel(){
 	
 	psi.clear();
@@ -87,19 +91,19 @@ ARIMAModel::~ARIMAModel(){
 
 int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsigned short opt){
 
-	if(p > 0 && d == 0 && q == 0 && !(opt & ARIMAMODEL_FIT_TREND)){
+	if(p > 0 && d == 0 && q == 0){ /*AR(p) model*/
 
 		ar_yule_walker(series,size,&c,&(psi[0]),p,residuals);
 
 		var = variance(residuals,size,mean(residuals,size));
 
-	}else if(p >= 0 && d == 0 && q > 0){
+	}else if(p >= 0 && d == 0 && q > 0){ /*ARMA(p,q) model*/
 
 		arma_long_ar(series,size,&c,&(psi[0]),p,&(theta[0]),q,residuals);
 
 		var = variance(residuals,size,mean(residuals,size));
 
-	}else if(p > 0 && d > 0 && q == 0 && !(opt & ARIMAMODEL_FIT_TREND)){
+	}else if(p > 0 && d > 0 && q == 0){ /*ARIMA(p,d,0) model*/
 		
 		double* differenced = new double[size-d];
 
@@ -111,7 +115,7 @@ int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsign
 
 		delete[] differenced;
 
-	}else if(p >= 0 && d > 0 && q > 0){
+	}else if(p >= 0 && d > 0 && q > 0){ /*ARIMA(p,d,q) model*/
 		
 		double* differenced = new double[size-d];
 
@@ -127,7 +131,8 @@ int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsign
 
 	unsigned int k = p + q + 1; /*ar, ma, & const paramters*/
 	if( opt & ARIMAMODEL_FIT_TREND ) k++; /*trend component*/
-	AIC = aic(size-d,k,(size-d-1)*var);
+
+	AIC = aic(size-d,k,(size-d-1)*var); /*Akaike information criterion*/
 
 	return 0;
 
