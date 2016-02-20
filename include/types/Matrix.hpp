@@ -41,6 +41,8 @@ class Matrix{
 
 		static Matrix dot(Matrix & lhs, Matrix & rhs);
 
+		static Matrix linear_solve(Matrix & A, Matrix & b);
+
 	private:
 
 		double* values;

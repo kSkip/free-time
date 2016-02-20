@@ -23,10 +23,17 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 
 extern "C"{
 
-extern void dgemm_(char * transa, char * transb, int * m, int * n, int * k,
-              double * alpha, double * A, int * lda,
+extern void dgemm_(char * transa, char * transb, int * m, int * n,
+              int * k, double * alpha, double * A, int * lda,
               double * B, int * ldb, double * beta,
               double *, int * ldc);
+
+extern void dgesv_(int * n, int * nrhs, double * A, int * lda,
+              int * ipiv, double * B, int * ldb, int * info);
+
+extern void dgels_(char * trans, int * m, int * n, int * nrhs,
+              double * A, int * lda, double * b, int * ldb,
+              double * work, int * lwork, int * info);
 
 }
 
@@ -159,5 +166,26 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 	dgemm_(&trans_a,&trans_b,&m,&n,&k,&alpha,lhs.values,&lda,rhs.values,&ldb,&beta,c.values,&ldc);
 
 	return c;
+
+}
+
+Matrix Matrix::linear_solve(Matrix & A, Matrix & b){
+
+	Matrix sol = b;
+
+	char trans = 'N';
+	int m = A.rows();
+	int n = A.cols();
+	int nrhs = b.cols();
+	int lda = m;
+	int ldb = m;
+	int lwork = n+nrhs*64;
+	double* work = (double*)malloc(lwork*sizeof(double));
+	int info;
+	//dgesv_(&n,&nrhs,A.values,&n,ipiv,sol.values,&n);
+
+	dgels_(&trans,&m,&n,&nrhs,A.values,&lda,sol.values,&ldb,work,&lwork,&info);
+
+	return sol;
 
 }
