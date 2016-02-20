@@ -17,33 +17,35 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #ifndef MATRIX_HPP
 #define MATRIX_HPP
 
+#include <string>
+
 class Matrix{
+
 	public:
+
 		Matrix();
 		Matrix(unsigned int num_rows, unsigned int num_cols);
 		Matrix(const Matrix & rhs);
 		~Matrix();
 
-		double* ptr(){
-			return values;
-		}
-		unsigned int rows(){
-			return num_rows;
-		}
-		unsigned int cols(){
-			return num_cols;
-		}
 		void resize(unsigned int num_rows, unsigned int num_cols);
+		
+		unsigned int rows(){ return num_rows; }
 
-		double* operator[](unsigned int i){
-			return (values+num_cols*i);
-		}
+		unsigned int cols(){ return num_cols; }
 
-		void print();
+		double operator()(unsigned int row, unsigned int col) const;
+		double& operator()(unsigned int row, unsigned int col);
+
+		std::string to_string();
+
+		static Matrix dot(Matrix & lhs, Matrix & rhs);
+
 	private:
+
 		double* values;
-		unsigned int num_rows;
-		unsigned int num_cols;
+
+		unsigned int num_rows, num_cols;
 
 };
 

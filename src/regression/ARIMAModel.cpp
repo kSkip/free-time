@@ -232,14 +232,14 @@ int ARIMAModel::forecast(double* series, unsigned int size, double* innovations,
 			pre_sample_series.push_back(value);
 			pre_sample_innovations.push_back(e);
 
-			forecasts[i][j] = value;
+			forecasts(i,j) = value;
 		}
 		for(j=0;j<projection;j++){
 			pre_sample_series.pop_back();
 			pre_sample_innovations.pop_back();
 		}
 
-		if(d > 0) undifference(forecasts[i],projection,d,series);
+		//if(d > 0) undifference(forecasts[i],projection,d,series);
 
 	}
 	
@@ -257,8 +257,8 @@ void ARIMAModel::getForecast(double* expectation, double* upper, double* lower){
 		double* sample = new double[foreParams.trials];
 
 		for(j=0;j<foreParams.trials;j++){
-			mean += forecasts[j][i];
-			sample[j] = forecasts[j][i];
+			mean += forecasts(j,i);
+			sample[j] = forecasts(j,i);
 		}
 		mean /= foreParams.trials;
 		se = sqrt(variance(sample,foreParams.trials,mean));
