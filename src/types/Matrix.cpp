@@ -103,7 +103,7 @@ double Matrix::operator()(unsigned int row, unsigned int col) const{
 
 		std::ostringstream error;
 		error << row      << "," << col      << " is out of range of Matrix(";
-		error << num_rows << "," << num_cols << ")\n";
+		error << num_rows << "," << num_cols << ")";
 		throw std::out_of_range(error.str());
 
 	}
@@ -118,7 +118,7 @@ double& Matrix::operator()(unsigned int row, unsigned int col){
 
 		std::ostringstream error;
 		error << row      << "," << col      << " is out of range of Matrix(";
-		error << num_rows << "," << num_cols << ")\n";
+		error << num_rows << "," << num_cols << ")";
 		throw std::out_of_range(error.str());
 
 	}
@@ -149,6 +149,14 @@ std::string Matrix::to_string(){
 }
 
 Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
+
+	if(lhs.num_cols != rhs.num_rows){
+
+		std::ostringstream error;
+		error << "dot: LHS cols not equal to RHS rows";
+		throw std::length_error(error.str());
+
+	}
 	
 	Matrix c(lhs.rows(),rhs.cols());
 
@@ -163,9 +171,77 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 	double beta = 0;
 	int ldc = m;
 
-	dgemm_(&trans_a,&trans_b,&m,&n,&k,&alpha,lhs.values,&lda,rhs.values,&ldb,&beta,c.values,&ldc);
+	dgemm_(&trans_a,&trans_b,&m,&n,&k,&alpha,
+           lhs.values,&lda,rhs.values,&ldb,&beta,
+           c.values,&ldc);
 
 	return c;
+
+}
+
+Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
+
+	if(lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols){
+
+		std::ostringstream error;
+		error << "add: Matrix dimensions do not match";
+		throw std::length_error(error.str());
+
+	}
+
+	Matrix c(lhs.num_rows,lhs.num_cols);
+
+	unsigned int i;
+
+	for(i=0;i<lhs.num_rows*lhs.num_cols;++i){
+
+		c.values[i] = lhs.values[i] + rhs.values[i];
+
+	}
+
+	return c;
+
+}
+
+Matrix Matrix::subtract(Matrix & lhs, Matrix & rhs){
+
+	if(lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols){
+
+		std::ostringstream error;
+		error << "subtract: Matrix dimensions do not match";
+		throw std::length_error(error.str());
+
+	}
+
+	Matrix c(lhs.num_rows,lhs.num_cols);
+
+	unsigned int i;
+
+	for(i=0;i<lhs.num_rows*lhs.num_cols;++i){
+
+		c.values[i] = lhs.values[i] - rhs.values[i];
+
+	}
+
+	return c;
+
+}
+
+Matrix Matrix::operator*(Matrix & rhs){
+
+	return dot(*this,rhs);
+
+}
+
+Matrix Matrix::operator+(Matrix & rhs){
+
+	return add(*this,rhs);
+
+}
+
+Matrix Matrix::operator-(Matrix & rhs){
+
+	return subtract(*this,rhs);
 
 }
 
@@ -179,12 +255,27 @@ Matrix Matrix::linear_solve(Matrix & A, Matrix & b){
 	int nrhs = b.cols();
 	int lda = m;
 	int ldb = m;
-	int lwork = n+nrhs*64;
-	double* work = (double*)malloc(lwork*sizeof(double));
+	int lwork = -1;
+	double* work = (double*)malloc(sizeof(double));
 	int info;
-	//dgesv_(&n,&nrhs,A.values,&n,ipiv,sol.values,&n);
 
-	dgels_(&trans,&m,&n,&nrhs,A.values,&lda,sol.values,&ldb,work,&lwork,&info);
+	if(A.num_rows == A.num_cols){
+	
+		int* ipiv = (int*)malloc(A.num_cols*sizeof(int));
+		dgesv_(&n,&nrhs,A.values,&n,ipiv,sol.values,&n,&info);
+		free(ipiv);
+
+	}else{
+
+		dgels_(&trans,&m,&n,&nrhs,A.values,&lda,sol.values,&ldb,work,&lwork,&info);
+
+		lwork = work[0];
+		free(work);
+		work = (double*)malloc(lwork*sizeof(double));
+
+		dgels_(&trans,&m,&n,&nrhs,A.values,&lda,sol.values,&ldb,work,&lwork,&info);
+
+	}
 
 	return sol;
 

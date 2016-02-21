@@ -40,6 +40,12 @@ class Matrix{
 		std::string to_string();
 
 		static Matrix dot(Matrix & lhs, Matrix & rhs);
+		static Matrix add(Matrix & lhs, Matrix & rhs);
+		static Matrix subtract(Matrix & lhs, Matrix & rhs);
+
+		Matrix operator*(Matrix & rhs);
+		Matrix operator+(Matrix & rhs);
+		Matrix operator-(Matrix & rhs);
 
 		static Matrix linear_solve(Matrix & A, Matrix & b);
 
