@@ -127,6 +127,51 @@ double& Matrix::operator()(unsigned int row, unsigned int col){
 
 }
 
+std::vector<double> Matrix::row_slice(unsigned int row_num, unsigned int first, unsigned int second){
+
+	if(row_num >= num_rows || first >= num_cols || second >= num_cols || first >= second){
+
+		std::ostringstream error;
+		error << "row_slice: invalid slice (";
+		error << row_num << "," << first << "," << second << ")";
+		throw std::out_of_range(error.str());
+
+	}
+
+	std::vector<double> row;
+
+	row.resize(second+1-first);
+
+	unsigned int i;
+	for(i=0;i<row.size();++i){
+
+		row[i] = *(values + row_num + num_cols*i);
+
+	}
+
+	return row;
+
+}
+
+std::vector<double> Matrix::col_slice(unsigned int col_num, unsigned int first, unsigned int second){
+
+	if(col_num >= num_cols || first >= num_rows || second >= num_rows || first >= second){
+
+		std::ostringstream error;
+		error << "col_slice: invalid slice (";
+		error << col_num << "," << first << "," << second << ")";
+		throw std::out_of_range(error.str());
+
+	}
+
+	std::vector<double> col;
+
+	col.assign(values + col_num*num_rows + first,values + col_num*num_rows + second+1);
+
+	return col;
+
+}
+
 std::string Matrix::to_string(){
 
 	unsigned int i, j;

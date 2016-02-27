@@ -18,6 +18,7 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #define MATRIX_HPP
 
 #include <string>
+#include <vector>
 
 class Matrix{
 
@@ -36,6 +37,9 @@ class Matrix{
 
 		double operator()(unsigned int row, unsigned int col) const;
 		double& operator()(unsigned int row, unsigned int col);
+
+		std::vector<double> row_slice(unsigned row, unsigned int first, unsigned int second);
+		std::vector<double> col_slice(unsigned row, unsigned int first, unsigned int second);
 
 		std::string to_string();
 
