@@ -1,12 +1,5 @@
 #include "ann/ANN.hpp"
 
-#include <iostream>
-#include <sstream>
-#include <stdexcept>
-
-#include <cstdlib>
-#include <cmath>
-
 ANN::ANN()
 {
 
@@ -38,21 +31,6 @@ ANN::ANN(const ANN & rhs)
     networkSpec = rhs.networkSpec;
 
     define(networkSpec);
-
-}
-
-void ANN::define(std::string spec)
-{
-
-    strvec cmds;
-
-    cmds = splitString(spec,";\n");
-
-	int i;
-    for(i=0;i<cmds.size();++i)
-    {
-        executeCommand(cmds[i]);
-    }
 
 }
 
@@ -165,36 +143,7 @@ void ANN::executeCommand(std::string cmd)
 
 }
 
-strvec ANN::splitString(std::string str, const char* delims)
-{
 
-    std::stringstream ss(str), sstok;
-    std::string delims_str(delims), item;
-    strvec tokens;
-    char c;
-
-    while(ss >> c) /* examine characters one at a time */
-    {
-
-        if(delims_str.find(c) == std::string::npos) sstok << c;
-
-        else
-        {
-
-            sstok >> item;
-            tokens.push_back(item);
-            sstok.clear();
-            item.clear();
-
-        }
-
-    }
-
-    if(sstok >> item) tokens.push_back(item);
-
-    return tokens;
-
-}
 
 void ANN::initInputs(const dvec & inputs)
 {
@@ -253,12 +202,6 @@ void ANN::zeroErrors(unsigned int trainSize)
         }
     }
 
-}
-
-/* Standard cost function derivative */
-double ANN::quad_dC_dA(double a, double out)
-{
-    return a - out;
 }
 
 dvec ANN::apply(double (*func)(double,double), const dvec& vec1, const dvec& vec2)

@@ -26,17 +26,20 @@ class Matrix{
 
 		Matrix();
 		Matrix(unsigned int num_rows, unsigned int num_cols);
+		Matrix(unsigned int num_rows, unsigned int num_cols, double value);
 		Matrix(const Matrix & rhs);
 		~Matrix();
 
 		void resize(unsigned int num_rows, unsigned int num_cols);
 		
-		unsigned int rows(){ return num_rows; }
+		unsigned int rows() const { return num_rows; }
 
-		unsigned int cols(){ return num_cols; }
+		unsigned int cols() const { return num_cols; }
 
 		double operator()(unsigned int row, unsigned int col) const;
 		double& operator()(unsigned int row, unsigned int col);
+
+        Matrix& operator=(const Matrix & rhs);
 
 		std::vector<double> row_slice(unsigned row, unsigned int first, unsigned int second);
 		std::vector<double> col_slice(unsigned row, unsigned int first, unsigned int second);
@@ -44,12 +47,19 @@ class Matrix{
 		std::string to_string();
 
 		static Matrix dot(Matrix & lhs, Matrix & rhs);
+        static Matrix had(Matrix & lhs, Matrix & rhs);
 		static Matrix add(Matrix & lhs, Matrix & rhs);
 		static Matrix subtract(Matrix & lhs, Matrix & rhs);
 
 		Matrix operator*(Matrix & rhs);
 		Matrix operator+(Matrix & rhs);
 		Matrix operator-(Matrix & rhs);
+
+        Matrix T(); /* matrix transpose */
+
+        Matrix apply(double (*func)(double));
+
+        static Matrix apply(double (*func)(double,double), const Matrix& mat1, const Matrix& mat2);
 
 		static Matrix linear_solve(Matrix & A, Matrix & b);
 

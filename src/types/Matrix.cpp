@@ -15,8 +15,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 ********************************************************************/
 
 #include "types/Matrix.hpp"
+
 #include <sstream>
 #include <stdexcept>
+
 #include <cstddef>
 #include <cstdlib>
 #include <cstring>
@@ -55,6 +57,23 @@ Matrix::Matrix(unsigned int rows_in, unsigned int cols_in){
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
 	else
 		values = NULL;
+
+}
+
+Matrix::Matrix(unsigned int rows_in, unsigned int cols_in, double value){
+
+	num_rows = rows_in;
+	num_cols = cols_in;
+
+	if(rows_in > 0 && cols_in > 0)
+		values = (double*)malloc(num_rows*num_cols*sizeof(double));
+	else
+		values = NULL;
+
+	unsigned int i;
+	for(i=0;i<num_rows*num_cols;++i){
+		values[i] = value;
+	}
 
 }
 
@@ -127,9 +146,28 @@ double& Matrix::operator()(unsigned int row, unsigned int col){
 
 }
 
+Matrix& Matrix::operator=(const Matrix & rhs)
+{
+
+    num_rows = rhs.num_rows;
+	num_cols = rhs.num_cols;
+
+	if(rhs.values){
+
+		values = (double*)malloc(num_rows*num_cols*sizeof(double));
+		memcpy(values,rhs.values,num_rows*num_cols*sizeof(double));
+
+	}else{
+
+		values = NULL;
+
+	}
+
+}
+
 std::vector<double> Matrix::row_slice(unsigned int row_num, unsigned int first, unsigned int second){
 
-	if(row_num >= num_rows || first >= num_cols || second >= num_cols || first >= second){
+	if(row_num >= num_rows || first >= num_cols || second >= num_cols || first > second){
 
 		std::ostringstream error;
 		error << "row_slice: invalid slice (";
@@ -155,7 +193,7 @@ std::vector<double> Matrix::row_slice(unsigned int row_num, unsigned int first, 
 
 std::vector<double> Matrix::col_slice(unsigned int col_num, unsigned int first, unsigned int second){
 
-	if(col_num >= num_cols || first >= num_rows || second >= num_rows || first >= second){
+	if(col_num >= num_cols || first >= num_rows || second >= num_rows || first > second){
 
 		std::ostringstream error;
 		error << "col_slice: invalid slice (";
@@ -224,6 +262,24 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 
 }
 
+Matrix Matrix::had(Matrix & lhs, Matrix & rhs)
+{
+
+    if(lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols())
+        throw std::runtime_error("Matrix dimensions must be the same for Hadamard product");
+
+    Matrix result(lhs.rows(),lhs.cols());
+
+    unsigned int i;
+    for(i=0;i<lhs.rows()*lhs.cols();++i)
+    {
+        result.values[i] = lhs.values[i] * rhs.values[i];
+    }
+
+    return result;
+
+}
+
 Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
 
 	if(lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols){
@@ -272,6 +328,24 @@ Matrix Matrix::subtract(Matrix & lhs, Matrix & rhs){
 
 }
 
+Matrix Matrix::T()
+{
+
+    Matrix trans(num_cols,num_rows);
+
+    unsigned int i, j;
+    for(i=0;i<num_rows;++i)
+    {
+        for(j=0;j<num_cols;++j)
+        {
+            trans(j,i) = (*this)(i,j);
+        }
+    }
+
+    return trans;
+
+}
+
 Matrix Matrix::operator*(Matrix & rhs){
 
 	return dot(*this,rhs);
@@ -287,6 +361,41 @@ Matrix Matrix::operator+(Matrix & rhs){
 Matrix Matrix::operator-(Matrix & rhs){
 
 	return subtract(*this,rhs);
+
+}
+
+Matrix Matrix::apply(double (*func)(double))
+{
+
+    Matrix result(num_rows,num_cols);
+
+    unsigned int i;
+    for(i=0;i<num_rows*num_cols;++i)
+    {
+        result.values[i] = func(values[i]);
+    }
+
+    return result;
+
+}
+
+Matrix Matrix::apply(double (*func)(double,double), const Matrix& mat1, const Matrix& mat2)
+{
+
+    if(mat1.rows() != mat2.rows() || mat1.cols() != mat2.cols())
+    {
+        throw std::runtime_error("\"apply\" must be used with matrices of same size");
+    }
+
+    unsigned int i;
+    Matrix result(mat1.rows(),mat1.cols());
+    for(i=0;i<mat1.rows()*mat1.cols();++i)
+    {
+        result.values[i] = func(mat1.values[i],mat2.values[i]);
+    }
+
+    return result;
+
 
 }
 
