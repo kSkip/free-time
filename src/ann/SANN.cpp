@@ -62,11 +62,6 @@ void SANN::train(const std::vector<dvec> & inputs,
         d[i-1] = Matrix::had( wd, activations[i-1] );
     }
 
-    for(i=0;i<d.size();++i)
-    {
-        std::cout << d[i].to_string() << "\n";
-    }
-
 }
 
 dvec SANN::predict(const dvec & inputs)
