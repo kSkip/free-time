@@ -20,6 +20,11 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <string>
 #include <vector>
 
+#ifdef CUDA
+#include <cuda_runtime.h>
+#include <cublas_v2.h>
+#endif
+
 class Matrix{
 
 	public:
@@ -52,8 +57,11 @@ class Matrix{
 		static Matrix subtract(Matrix & lhs, Matrix & rhs);
 
 		Matrix operator*(Matrix & rhs);
+		Matrix operator*(Matrix rhs);
 		Matrix operator+(Matrix & rhs);
+		Matrix operator+(Matrix rhs);
 		Matrix operator-(Matrix & rhs);
+		Matrix operator-(Matrix rhs);
 
         Matrix T(); /* matrix transpose */
 
@@ -68,6 +76,12 @@ class Matrix{
 		double* values;
 
 		unsigned int num_rows, num_cols;
+
+        #ifdef CUDA
+        cublasHandle_t hCudaBlas;
+
+        double* pDev;
+        #endif
 
 };
 

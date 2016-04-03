@@ -23,6 +23,10 @@ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND 
 #include <cstdlib>
 #include <cstring>
 
+#ifdef CUDA
+#include "cuda/MatrixOp.h"
+#endif
+
 extern "C"{
 
 extern void dgemm_(char * transa, char * transb, int * m, int * n,
@@ -41,10 +45,21 @@ extern void dgels_(char * trans, int * m, int * n, int * nrhs,
 
 Matrix::Matrix(){
 
+    /*
+     * set defaults: values zero, pointers null
+     */
+
 	num_rows = 0;
 	num_cols = 0;
 
 	values = NULL;
+    #ifdef CUDA
+    pDev = NULL;
+    #endif
+
+    #ifdef CUDA
+    cublasCreate(&hCudaBlas);
+    #endif
 
 }
 
@@ -53,10 +68,28 @@ Matrix::Matrix(unsigned int rows_in, unsigned int cols_in){
 	num_rows = rows_in;
 	num_cols = cols_in;
 
+    /*
+     * only allocate memory when the size is non-zero
+     */
+
 	if(rows_in > 0 && cols_in > 0)
+    {
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
+        #ifdef CUDA
+        cudaMalloc((void**)&pDev,num_rows*num_cols*sizeof(double));
+        #endif
+    }
 	else
+    {
 		values = NULL;
+        #ifdef CUDA
+        pDev = NULL;
+        #endif
+    }
+
+    #ifdef CUDA
+    cublasCreate(&hCudaBlas);
+    #endif
 
 }
 
@@ -65,15 +98,37 @@ Matrix::Matrix(unsigned int rows_in, unsigned int cols_in, double value){
 	num_rows = rows_in;
 	num_cols = cols_in;
 
+    /*
+     * only allocate memory when the size is non-zero
+     */
+
 	if(rows_in > 0 && cols_in > 0)
+    {
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
+        #ifdef CUDA
+        cudaMalloc((void**)&pDev,num_rows*num_cols*sizeof(double));
+        #endif
+    }
 	else
+    {
 		values = NULL;
+        #ifdef CUDA
+        pDev = NULL;
+        #endif
+    }
+
+    /*
+     * assign all elements to given value
+     */
 
 	unsigned int i;
 	for(i=0;i<num_rows*num_cols;++i){
 		values[i] = value;
 	}
+
+    #ifdef CUDA
+    cublasCreate(&hCudaBlas);
+    #endif
 
 }
 
@@ -82,41 +137,84 @@ Matrix::Matrix(const Matrix & rhs){
 	num_rows = rhs.num_rows;
 	num_cols = rhs.num_cols;
 
-	if(rhs.values){
+    /*
+     * copy the values if the data is there
+     */
+
+	if(rhs.values)
+    {
 
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
 		memcpy(values,rhs.values,num_rows*num_cols*sizeof(double));
-
-	}else{
-
-		values = NULL;
+        #ifdef CUDA
+        cudaMalloc((void**)&pDev,num_rows*num_cols*sizeof(double));
+        #endif
 
 	}
+    else{
+
+		values = NULL;
+        #ifdef CUDA
+        pDev = NULL;
+        #endif
+	}
+
+    #ifdef CUDA
+    cublasCreate(&hCudaBlas);
+    #endif
 
 }
 
 Matrix::~Matrix(){
 
+    /*
+     * free everything
+     */
+
 	if(values) free(values);
 	values = NULL;
+
+    #ifdef CUDA
+    if(pDev) cudaFree(pDev);
+    pDev = NULL;
+
+	cublasDestroy(hCudaBlas);
+    #endif
 
 }
 
 void Matrix::resize(unsigned int rows_in, unsigned int cols_in){
 
 	if(values) free(values);
+    #ifdef CUDA
+    if(pDev) cudaFree(pDev);
+    #endif
 
 	num_rows = rows_in;
 	num_cols = cols_in;
 
-	if(rows_in > 0 && cols_in > 0) 
+	if(rows_in > 0 && cols_in > 0)
+    {
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
+        #ifdef CUDA
+        cudaMalloc((void**)&pDev,num_rows*num_cols*sizeof(double));
+        #endif
+    }
 	else
+    {
 		values = NULL;
+        #ifdef CUDA
+        pDev = NULL;
+        #endif
+    }
 
 }
 
 double Matrix::operator()(unsigned int row, unsigned int col) const{
+
+    /*
+     * check bounds
+     */
 
 	if(row >= num_rows || col >= num_cols){
 
@@ -132,6 +230,10 @@ double Matrix::operator()(unsigned int row, unsigned int col) const{
 }
 
 double& Matrix::operator()(unsigned int row, unsigned int col){
+
+    /*
+     * check bounds
+     */
 
 	if(row >= num_rows || col >= num_cols){
 
@@ -156,10 +258,16 @@ Matrix& Matrix::operator=(const Matrix & rhs)
 
 		values = (double*)malloc(num_rows*num_cols*sizeof(double));
 		memcpy(values,rhs.values,num_rows*num_cols*sizeof(double));
+        #ifdef CUDA
+        cudaMalloc((void**)&pDev,num_rows*num_cols*sizeof(double));
+        #endif
 
 	}else{
 
 		values = NULL;
+        #ifdef CUDA
+        pDev = NULL;
+        #endif
 
 	}
 
@@ -254,9 +362,33 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 	double beta = 0;
 	int ldc = m;
 
+    /*
+     * cublas and blas function arguments
+     * have nice one-to-one correspondence
+     */
+
+    #ifdef CUDA
+
+    cublasSetMatrix(m,k,sizeof(double),lhs.values,lda,lhs.pDev,lda);
+    cublasSetMatrix(k,n,sizeof(double),rhs.values,ldb,rhs.pDev,ldb);
+
+    cublasDgemm(lhs.hCudaBlas,CUBLAS_OP_N,CUBLAS_OP_N,
+                m,n,k,
+                &alpha,
+                lhs.pDev, lda,
+                rhs.pDev, ldb,
+                &beta,
+                c.pDev, ldc);
+
+    cublasGetMatrix(m,n,sizeof(double),c.pDev,ldc,c.values,ldc);
+
+    #else
+
 	dgemm_(&trans_a,&trans_b,&m,&n,&k,&alpha,
            lhs.values,&lda,rhs.values,&ldb,&beta,
            c.values,&ldc);
+
+    #endif
 
 	return c;
 
@@ -268,15 +400,40 @@ Matrix Matrix::had(Matrix & lhs, Matrix & rhs)
     if(lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols())
         throw std::runtime_error("Matrix dimensions must be the same for Hadamard product");
 
-    Matrix result(lhs.rows(),lhs.cols());
+    Matrix c(lhs.rows(),lhs.cols());
+
+    /*
+     * for using the GPU we need to copy to
+     * device memory, call kernel, then copy result
+     */
+
+    #ifdef CUDA
+
+    cudaMemcpy(lhs.pDev,lhs.values,
+               lhs.rows()*lhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    cudaMemcpy(rhs.pDev,rhs.values,
+               rhs.rows()*rhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    dhad(lhs.pDev,rhs.pDev,c.pDev,lhs.rows()*lhs.cols());
+
+    cudaMemcpy(c.values,c.pDev,
+               c.rows()*c.cols()*sizeof(double),
+               cudaMemcpyDeviceToHost);
+
+    #else
 
     unsigned int i;
     for(i=0;i<lhs.rows()*lhs.cols();++i)
     {
-        result.values[i] = lhs.values[i] * rhs.values[i];
+        c.values[i] = lhs.values[i] * rhs.values[i];
     }
 
-    return result;
+    #endif
+
+    return c;
 
 }
 
@@ -292,6 +449,24 @@ Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
 
 	Matrix c(lhs.num_rows,lhs.num_cols);
 
+    #ifdef CUDA
+
+    cudaMemcpy(lhs.pDev,lhs.values,
+               lhs.rows()*lhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    cudaMemcpy(rhs.pDev,rhs.values,
+               rhs.rows()*rhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    dadd(lhs.pDev,rhs.pDev,c.pDev,lhs.rows()*lhs.cols());
+
+    cudaMemcpy(c.values,c.pDev,
+               c.rows()*c.cols()*sizeof(double),
+               cudaMemcpyDeviceToHost);
+
+    #else
+
 	unsigned int i;
 
 	for(i=0;i<lhs.num_rows*lhs.num_cols;++i){
@@ -299,6 +474,8 @@ Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
 		c.values[i] = lhs.values[i] + rhs.values[i];
 
 	}
+
+    #endif
 
 	return c;
 
@@ -316,6 +493,24 @@ Matrix Matrix::subtract(Matrix & lhs, Matrix & rhs){
 
 	Matrix c(lhs.num_rows,lhs.num_cols);
 
+    #ifdef CUDA
+
+    cudaMemcpy(lhs.pDev,lhs.values,
+               lhs.rows()*lhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    cudaMemcpy(rhs.pDev,rhs.values,
+               rhs.rows()*rhs.cols()*sizeof(double),
+               cudaMemcpyHostToDevice);
+
+    dsub(lhs.pDev,rhs.pDev,c.pDev,lhs.rows()*lhs.cols());
+
+    cudaMemcpy(c.values,c.pDev,
+               c.rows()*c.cols()*sizeof(double),
+               cudaMemcpyDeviceToHost);
+
+    #else
+
 	unsigned int i;
 
 	for(i=0;i<lhs.num_rows*lhs.num_cols;++i){
@@ -323,6 +518,8 @@ Matrix Matrix::subtract(Matrix & lhs, Matrix & rhs){
 		c.values[i] = lhs.values[i] - rhs.values[i];
 
 	}
+
+    #endif
 
 	return c;
 
@@ -346,7 +543,18 @@ Matrix Matrix::T()
 
 }
 
+/*
+ * all the various definitions for the
+ * overloaded operators
+ */
+
 Matrix Matrix::operator*(Matrix & rhs){
+
+	return dot(*this,rhs);
+
+}
+
+Matrix Matrix::operator*(Matrix rhs){
 
 	return dot(*this,rhs);
 
@@ -358,7 +566,19 @@ Matrix Matrix::operator+(Matrix & rhs){
 
 }
 
+Matrix Matrix::operator+(Matrix rhs){
+
+	return add(*this,rhs);
+
+}
+
 Matrix Matrix::operator-(Matrix & rhs){
+
+	return subtract(*this,rhs);
+
+}
+
+Matrix Matrix::operator-(Matrix rhs){
 
 	return subtract(*this,rhs);
 

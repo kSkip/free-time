@@ -7,3 +7,4 @@ ARFLAGS=rs
 INCLUDES= -I../../include -I/usr/local/include/lapacke -I../../third-party
 LIBDIRS= -L/usr/local/lib -L../../lib
 LIBS_LAPACK= -llapacke -llapack -lrefblas -lgfortran
+LIBDIRS_CUDA = -L/usr/local/cuda/lib64/

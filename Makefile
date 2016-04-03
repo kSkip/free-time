@@ -10,6 +10,13 @@ all: amath database regression types
 	cd src/database; make exe;
 	cd src/regression; make exe;
 
+all-cuda: amath database regression types-cuda cuda
+	if [ ! -d bin ]; then mkdir bin; fi
+	if [ ! -d lib ]; then mkdir lib; fi
+	cd src/amath; make exe;
+	cd src/database; make exe;
+	cd src/regression; make exe-cuda;
+
 amath:
 	cd src/amath; make all;
 
@@ -21,6 +28,12 @@ regression:
 
 types:
 	cd src/types; make all;
+
+types-cuda:
+	cd src/types; make all-cuda;
+
+cuda:
+	cd src/cuda; make all;
 
 clean:
 	cd bin; rm -f *;
