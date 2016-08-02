@@ -21,6 +21,9 @@ static char base_url_h[] = {"http://ichart.finance.yahoo.com/table.csv?s=%s&a=%d
 
 static char months[12][3] = {"Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"};
 
+/*
+ * Returns integer value associated with month abbreviation
+ */
 int month(char* month_string){
 
 	size_t i;
@@ -71,7 +74,9 @@ char fetchInterval(unsigned short options){
 
 }
 
-/*this function copies the contents from the file obtain by the curl http request*/
+/*
+ * copies the contents from the file obtain by the curl http request
+ */
 size_t write_data(FILE* in, FILE* out, unsigned short options){
 
 	unsigned int i, pos;
@@ -83,6 +88,10 @@ size_t write_data(FILE* in, FILE* out, unsigned short options){
 	char* ptr = (char*)malloc(size*sizeof(char));
 
 	fread(ptr,sizeof(char),size,in);
+
+	if(strstr(ptr,"404 Not Found")){
+		return 0;
+	}
 	
 	pos = 0;
 	if(options & FETCH_HISTORIC){
@@ -107,14 +116,16 @@ size_t write_data(FILE* in, FILE* out, unsigned short options){
 
 }
 
-/*options are bitwise ORs of the commandline flags qhdwmo*/
+/*
+ * options are bitwise ORs of the commandline flags qhdwmo
+ */
 void fetch_data(const char* sym, const char* start_date, const char* end_date, FILE* output_fp, unsigned short options){
 
 	char url[128];
 	unsigned int s_m, s_d, s_y, e_m, e_d, e_y;
 
 	getDate(NULL,&e_m,&e_d,&e_y);
-	e_m--; /*yahoo finance uses zero based month numbers*/
+	e_m--; /* yahoo finance uses zero based month numbers */
 
 	CURL* curl;
 	FILE* output;

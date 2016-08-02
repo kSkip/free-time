@@ -251,6 +251,12 @@ double& Matrix::operator()(unsigned int row, unsigned int col){
 Matrix& Matrix::operator=(const Matrix & rhs)
 {
 
+	if(values) free(values);
+	values = NULL;
+    #ifdef CUDA
+    if(pDev) cudaFree(pDev);
+    #endif
+
     num_rows = rhs.num_rows;
 	num_cols = rhs.num_cols;
 
@@ -339,7 +345,7 @@ std::string Matrix::to_string(){
 
 }
 
-Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
+Matrix Matrix::dot(const Matrix & lhs, const Matrix & rhs){
 
 	if(lhs.num_cols != rhs.num_rows){
 
@@ -348,7 +354,7 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 		throw std::length_error(error.str());
 
 	}
-	
+
 	Matrix c(lhs.rows(),rhs.cols());
 
 	char trans_a = 'N';
@@ -394,7 +400,7 @@ Matrix Matrix::dot(Matrix & lhs, Matrix & rhs){
 
 }
 
-Matrix Matrix::had(Matrix & lhs, Matrix & rhs)
+Matrix Matrix::had(const Matrix & lhs, const Matrix & rhs)
 {
 
     if(lhs.rows() != rhs.rows() || lhs.cols() != rhs.cols())
@@ -437,7 +443,7 @@ Matrix Matrix::had(Matrix & lhs, Matrix & rhs)
 
 }
 
-Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
+Matrix Matrix::add(const Matrix & lhs, const Matrix & rhs){
 
 	if(lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols){
 
@@ -481,7 +487,7 @@ Matrix Matrix::add(Matrix & lhs, Matrix & rhs){
 
 }
 
-Matrix Matrix::subtract(Matrix & lhs, Matrix & rhs){
+Matrix Matrix::subtract(const Matrix & lhs, const Matrix & rhs){
 
 	if(lhs.num_rows != rhs.num_rows || lhs.num_cols != rhs.num_cols){
 
@@ -548,41 +554,29 @@ Matrix Matrix::T()
  * overloaded operators
  */
 
-Matrix Matrix::operator*(Matrix & rhs){
+Matrix Matrix::operator*(const Matrix & rhs){
 
 	return dot(*this,rhs);
 
 }
 
-Matrix Matrix::operator*(Matrix rhs){
-
-	return dot(*this,rhs);
-
-}
-
-Matrix Matrix::operator+(Matrix & rhs){
+Matrix Matrix::operator+(const Matrix & rhs){
 
 	return add(*this,rhs);
 
 }
 
-Matrix Matrix::operator+(Matrix rhs){
-
-	return add(*this,rhs);
-
-}
-
-Matrix Matrix::operator-(Matrix & rhs){
+Matrix Matrix::operator-(const Matrix & rhs){
 
 	return subtract(*this,rhs);
 
 }
 
-Matrix Matrix::operator-(Matrix rhs){
-
-	return subtract(*this,rhs);
-
-}
+/*
+ * these two apply() functions use the
+ * Matrices as function arguments for
+ * the user defined function
+ */
 
 Matrix Matrix::apply(double (*func)(double))
 {
@@ -634,7 +628,7 @@ Matrix Matrix::linear_solve(Matrix & A, Matrix & b){
 	int info;
 
 	if(A.num_rows == A.num_cols){
-	
+
 		int* ipiv = (int*)malloc(A.num_cols*sizeof(int));
 		dgesv_(&n,&nrhs,A.values,&n,ipiv,sol.values,&n,&info);
 		free(ipiv);
@@ -652,5 +646,26 @@ Matrix Matrix::linear_solve(Matrix & A, Matrix & b){
 	}
 
 	return sol;
+
+}
+
+/*
+ * Friend functions
+ */
+
+Matrix operator*(double scalar, const Matrix& rhs)
+{
+
+    Matrix c(rhs.num_rows,rhs.num_cols);
+
+	unsigned int i;
+
+	for(i=0;i<rhs.num_rows*rhs.num_cols;++i){
+
+		c.values[i] = scalar * rhs.values[i];
+
+	}
+
+	return c;
 
 }

@@ -36,7 +36,7 @@ class Matrix{
 		~Matrix();
 
 		void resize(unsigned int num_rows, unsigned int num_cols);
-		
+
 		unsigned int rows() const { return num_rows; }
 
 		unsigned int cols() const { return num_cols; }
@@ -51,17 +51,16 @@ class Matrix{
 
 		std::string to_string();
 
-		static Matrix dot(Matrix & lhs, Matrix & rhs);
-        static Matrix had(Matrix & lhs, Matrix & rhs);
-		static Matrix add(Matrix & lhs, Matrix & rhs);
-		static Matrix subtract(Matrix & lhs, Matrix & rhs);
+		static Matrix dot(const Matrix & lhs, const Matrix & rhs);
+        static Matrix had(const Matrix & lhs, const Matrix & rhs);
+		static Matrix add(const Matrix & lhs, const Matrix & rhs);
+		static Matrix subtract(const Matrix & lhs, const Matrix & rhs);
 
-		Matrix operator*(Matrix & rhs);
-		Matrix operator*(Matrix rhs);
-		Matrix operator+(Matrix & rhs);
-		Matrix operator+(Matrix rhs);
-		Matrix operator-(Matrix & rhs);
-		Matrix operator-(Matrix rhs);
+		Matrix operator*(const Matrix & rhs);
+		Matrix operator+(const Matrix & rhs);
+		Matrix operator-(const Matrix & rhs);
+
+		friend Matrix operator*(double scalar, const Matrix& rhs);
 
         Matrix T(); /* matrix transpose */
 
@@ -84,5 +83,7 @@ class Matrix{
         #endif
 
 };
+
+Matrix operator*(double scalar, const Matrix& rhs);
 
 #endif

@@ -1,3 +1,19 @@
+/********************************************************************
+ANN.hpp
+Copyright (c) 2016, Kane Scipioni
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
+
+3. Neither the name of the copyright holder nor the names of its contributors may be used to endorse or promote products derived from this software without specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+********************************************************************/
+
 #ifndef ANN_HPP
 #define ANN_HPP
 
@@ -13,34 +29,34 @@
 
 #include "types/Matrix.hpp"
 
+#ifndef TYPE_DVEC
+#define TYPE_DVEC
 typedef std::vector<double> dvec;
-typedef std::vector<std::string> strvec;
+#endif
+
+#ifndef TYPE_TABLE
+#define TYPE_TABLE
+typedef std::vector< std::vector<double> > Table;
+#endif
 
 /*
  * Base class for all neural network
  * implmentations in free-time applications
  */
-class BasicANN {
+class ANN {
 
     public:
-        BasicANN();
-        ~BasicANN();
-        BasicANN(const BasicANN & rhs);
+        ANN();
+        ~ANN();
+        ANN(const ANN & rhs);
 
-        void define(std::string spec);
+        virtual void define(const char* filename) =0;
 
-        virtual void train(const std::vector<dvec> & inputs,
-                           const std::vector<dvec> & outputs) =0;
+        virtual void train(const Table& inputs, const Table& outputs) =0;
 
         virtual dvec predict(const dvec & inputs) =0;
 
     protected:
-
-        std::string networkSpec;
-
-        virtual void executeCommand(std::string cmd) =0;
-
-        static strvec splitString(std::string str, const char* delims);
 
         static double sigmoid(double z);
 
@@ -49,125 +65,27 @@ class BasicANN {
 };
 
 /*
- * Artifical Neural Network
- */
-class ANN : public BasicANN {
-
-    public:
-
-        ANN();
-        ANN(std::string spec);
-        ~ANN();
-        ANN(const ANN & rhs);
-
-        void train(const std::vector<dvec> & inputs,
-                   const std::vector<dvec> & outputs);
-
-        dvec predict(const dvec & inputs);
-
-    private:
-
-        /*
-         * A nested Neuron class will give the
-         * opportunity to make nice interfaces
-         * when running the back propagation
-         */
-        class Neuron {
-
-            public:
-
-                Neuron();
-                ~Neuron();
-                Neuron(const Neuron & rhs);
-
-                void addInput(Neuron* inputNeuron);
-                void addInput(const double* rawInput);
-
-                double getOutput() const { return output; }
-
-                void setOutput();
-
-                void saveOutput(unsigned int set) { sampleOutputs[set] = output; }
-
-                void setError(unsigned int set, double value) { d_l[set] = value; }
-
-                void initBackProp(unsigned int trainSize);
-
-                void backProp(unsigned int trainSet);
-
-                void gradientDescentUpdate(double rate);
-
-            private:
-
-                /* for mini batch learning */
-                dvec d_l;
-                dvec sampleOutputs;
-                /***************************/
-
-                std::vector<Neuron*> inputs;
-                const double* rawInput;
-
-                dvec weights;
-
-                double bias;
-
-                double output;
-
-                double activationFunction(double z);
-
-        };
-
-        /* This is the network */
-        std::vector< std::vector<Neuron> > neurons;
-
-        /* Methods for building the ANN */
-        void addLayer(const strvec& sections);
-
-        void addConnection(const strvec& sections);
-
-        void executeCommand(std::string cmd);
-
-        /* Methods for feedforward calculation */
-
-        void initInputs(const dvec & inputs);
-
-        void fireNeurons();
-
-        dvec getOutputs();
-
-        /* Methods for backpropagation and shochastic gradient descent */
-
-        void zeroErrors(unsigned int trainSize);
-
-        dvec apply(double (*func)(double,double), const dvec& vec1, const dvec& vec2);
-
-        void backPropagation(const std::vector<dvec> & inputs,
-                             const std::vector<dvec> & outputs);
-
-        void backPropSet(const dvec& inputs, const dvec& outputs, unsigned int set);
-
-        void StochasticGradientDescent();
-
-};
-
-/*
- * Saturated Artifical Neural Network:
+ * Deep Artifical Neural Network:
  * All neurons feedforward output to
- * all other neurons in the next layer
+ * all other neurons in the next layer.
+ * Multiple hidden layers can exist.
  */
-class SANN : public BasicANN {
+class DNN : public ANN {
 
     public:
 
-        SANN();
-        SANN(std::string spec);
-        ~SANN();
-        SANN(const SANN & rhs);
+        DNN();
+        DNN(const char* filename);
+        ~DNN();
+        DNN(const DNN & rhs);
 
-        void train(const std::vector<dvec> & inputs,
-                   const std::vector<dvec> & outputs);
+        void define(const char* filename);
+
+        void train(const Table& inputs, const Table& outputs);
 
         dvec predict(const dvec & inputs);
+
+        std::string toString();
 
     private:
 
@@ -176,10 +94,13 @@ class SANN : public BasicANN {
         std::vector<Matrix> weights;
         std::vector<Matrix> bias;
 
-        /* Methods for building the ANN */
-        void addLayer(const strvec& sections);
+        std::vector<Matrix> wGradient;
+        std::vector<Matrix> bGradient;
 
-        void executeCommand(std::string cmd);
+        double learningRate;
+
+        /* Backpropagation functions */
+        void backPropSet(const dvec& input, const dvec& output);
 
         void feedForward(const dvec & inputs);
 
