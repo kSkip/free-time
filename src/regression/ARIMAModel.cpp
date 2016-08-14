@@ -91,48 +91,47 @@ ARIMAModel::~ARIMAModel(){
 
 int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsigned short opt){
 
-	if(p > 0 && d == 0 && q == 0){ /*AR(p) model*/
+	double alpha;
+
+	if( opt & ARIMAMODEL_FIT_TREND ){
+
+		double* detrended = new double[size];
+
+		detrend(series,size,&alpha,&beta,detrended);
+
+		series = detrended;
+
+	}else if(d > 0){ /* unlikely that it's both integrated and det. trend */
+
+		double* differenced = new double[size-d];
+
+		difference(series,size,d,differenced);
+
+		series = differenced;
+
+	}
+
+	if(p > 0 && q == 0){ /*AR(p) model*/
 
 		ar_yule_walker(series,size,&c,&(psi[0]),p,residuals);
 
 		var = variance(residuals,size,mean(residuals,size));
 
-	}else if(p >= 0 && d == 0 && q > 0){ /*ARMA(p,q) model*/
+	}else if(p >= 0 && q > 0){ /*ARMA(p,q) model*/
 
 		arma_long_ar(series,size,&c,&(psi[0]),p,&(theta[0]),q,residuals);
 
 		var = variance(residuals,size,mean(residuals,size));
 
-	}else if(p > 0 && d > 0 && q == 0){ /*ARIMA(p,d,0) model*/
-		
-		double* differenced = new double[size-d];
-
-		difference(series,size,d,differenced);
-
-		ar_yule_walker(differenced,size-d,&c,&(psi[0]),p,residuals);
-
-		var = variance(residuals,size-d,0);
-
-		delete[] differenced;
-
-	}else if(p >= 0 && d > 0 && q > 0){ /*ARIMA(p,d,q) model*/
-		
-		double* differenced = new double[size-d];
-
-		difference(series,size,d,differenced);
-
-		arma_long_ar(differenced,size-d,&c,&(psi[0]),p,&(theta[0]),q,residuals);
-
-		var = variance(residuals,size-d,0);
-
-		delete[] differenced;
-
 	}
 
 	unsigned int k = p + q + 1; /*ar, ma, & const paramters*/
-	if( opt & ARIMAMODEL_FIT_TREND ) k++; /*trend component*/
+
+	if( opt & ARIMAMODEL_FIT_TREND ) c = alpha; /*trend const. component*/
 
 	AIC = aic(size-d,k,(size-d-1)*var); /*Akaike information criterion*/
+
+	if(d > 0 || opt & ARIMAMODEL_FIT_TREND ) delete[] series;
 
 	return 0;
 
@@ -197,7 +196,21 @@ int ARIMAModel::forecast(double* series, unsigned int size, double* innovations,
 	unsigned int i, j, k;
 	double* data;
 
-	if(d > 0){
+	/*
+	 * First we must obtain the pre sampled
+	 * stationary series before we can model
+	 * the process
+	 */
+	if(beta != 0){ /* subtract deterministic trend */
+
+		for(i=0;i<pre_sample_size;i++){
+			pre_sample_series.push_back( data[pre_sample_size-i-1] - c - beta*(pre_sample_size-i-1) );
+			if(innovations) pre_sample_innovations.push_back(innovations[pre_sample_size-i-1]);
+		}
+		
+
+	}else if(d > 0){ /* eliminate shocastic trend */
+
 		data = new double[size-d];
 		difference(series,size,d,data);
 
@@ -207,25 +220,30 @@ int ARIMAModel::forecast(double* series, unsigned int size, double* innovations,
 		}
 		
 		delete[] data;
-	}else{
+
+	}else{ /* do nothing */
+
 		for(i=0;i<pre_sample_size;i++){
 			pre_sample_series.push_back(series[pre_sample_size-i-1]);
 			if(innovations) pre_sample_innovations.push_back(innovations[pre_sample_size-i-1]);
 		}
+
 	}
 
+	/*
+	 * Now for the simulation
+	 */
 	for(i=0;i<trials;i++){
 
 		for(j=0;j<projection;j++){
 			double value = 0;
 
-			for(k=0;k<p;k++){
-				value += psi[k]*pre_sample_series[pre_sample_series.size()-k-1];
-			}
+			for(k=0;k<p;k++)
+				value +=   psi[k] * pre_sample_series[pre_sample_series.size()-k-1];
 		
-			for(k=0;k<q && k<pre_sample_innovations.size();k++){
-				value += theta[k]*pre_sample_innovations[pre_sample_innovations.size()-k-1];
-			}
+			for(k=0;k<q && k<pre_sample_innovations.size();k++)
+				value += theta[k] * pre_sample_innovations[pre_sample_innovations.size()-k-1];
+
 			double e = noise(generator);
 			value += c + beta*(initial_time + j + 1) + e;
 	
