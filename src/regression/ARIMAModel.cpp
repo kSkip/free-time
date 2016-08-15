@@ -82,9 +82,9 @@ ARIMAModel::ARIMAModel(const ARIMAModel & rhs){
 
 //default destructor
 ARIMAModel::~ARIMAModel(){
-	
+
 	psi.clear();
-	
+
 	theta.clear();
 
 }
@@ -137,102 +137,147 @@ int ARIMAModel::fit(double* series, unsigned int size, double* residuals, unsign
 
 }
 
-void ARIMAModel::getModelSpec(struct ModelSpec* specs){
+ModelSpec ARIMAModel::getModelSpec(){
+
+	ModelSpec specs;
 
 	unsigned int i;
-	specs->p = p;
-	specs->d = d;
-	specs->q = q;
+	specs.p = p;
+	specs.d = d;
+	specs.q = q;
 
-	specs->psi.resize(p);
-	for(i=0;i<p;i++) specs->psi[i] = psi[i];
+	specs.psi.resize(p);
+	for(i=0;i<p;i++) specs.psi[i] = psi[i];
 
-	specs->theta.resize(q);
-	for(i=0;i<q;i++) specs->theta[i] = theta[i];
+	specs.theta.resize(q);
+	for(i=0;i<q;i++) specs.theta[i] = theta[i];
 
-	specs->c = c;
-	specs->beta = beta;
-	specs->var = var;
+	specs.c    = c;
+	specs.beta = beta;
+	specs.var  = var;
+
+	return specs;
 
 }
 
-void ARIMAModel::setModelSpec(ModelSpec* specs){
+void ARIMAModel::setModelSpec(const ModelSpec & specs){
 
 	unsigned int i;
-	p = specs->p;
-	d = specs->d;
-	q = specs->q;
+	p = specs.p;
+	d = specs.d;
+	q = specs.q;
 
 	psi.resize(p);
-	for(i=0;i<p;i++) psi[i] = specs->psi[i];
+	for(i=0;i<p;i++) psi[i] = specs.psi[i];
 
 	theta.resize(q);
-	for(i=0;i<q;i++) theta[i] = specs->theta[i];
+	for(i=0;i<q;i++) theta[i] = specs.theta[i];
 
-	c = specs->c;
-	beta = specs->beta;
-	var = specs->var;
+	c    = specs.c;
+	beta = specs.beta;
+	var  = specs.var;
 
 }
 
 int ARIMAModel::forecast(double* series, unsigned int size, double* innovations, int initial_time){
 
-	std::vector<double> pre_sample_series;
-	std::vector<double> pre_sample_innovations;
-
 	unsigned int pre_sample_size = std::max(p,q);
-	if(pre_sample_size > size){
+
+	if(pre_sample_size > size)
+	{
 		std::cerr << "ERROR: forecast: sample size too small\n";
 		return -1;
 	}
 
-	std::default_random_engine generator;
-	std::normal_distribution<double> noise(0.0f,sqrt(var));
-	unsigned int projection = foreParams.projection;
-	unsigned int trials = foreParams.trials;
-
-	forecasts.resize(trials,projection);
-
-	unsigned int i, j, k;
-	double* data;
+	std::vector<double> pre_sample_series     (pre_sample_size);
+	std::vector<double> pre_sample_innovations(pre_sample_size);
 
 	/*
 	 * First we must obtain the pre sampled
 	 * stationary series before we can model
 	 * the process
 	 */
-	if(beta != 0){ /* subtract deterministic trend */
+	 getStationaryProcess(pre_sample_series,
+	 					  pre_sample_innovations,
+	 					  series,innovations,size);
 
-		for(i=0;i<pre_sample_size;i++){
-			pre_sample_series.push_back( data[pre_sample_size-i-1] - c - beta*(pre_sample_size-i-1) );
-			if(innovations) pre_sample_innovations.push_back(innovations[pre_sample_size-i-1]);
-		}
-		
-
-	}else if(d > 0){ /* eliminate shocastic trend */
-
-		data = new double[size-d];
-		difference(series,size,d,data);
-
-		for(i=0;i<pre_sample_size;i++){
-			pre_sample_series.push_back(data[pre_sample_size-i-1]);
-			if(innovations) pre_sample_innovations.push_back(innovations[pre_sample_size-i-1]);
-		}
-		
-		delete[] data;
-
-	}else{ /* do nothing */
-
-		for(i=0;i<pre_sample_size;i++){
-			pre_sample_series.push_back(series[pre_sample_size-i-1]);
-			if(innovations) pre_sample_innovations.push_back(innovations[pre_sample_size-i-1]);
-		}
-
-	}
 
 	/*
 	 * Now for the simulation
 	 */
+	simulate(pre_sample_series,pre_sample_innovations,foreParams);
+
+	addTrend(size+1,pre_sample_series);
+
+	return 0;
+
+}
+
+void ARIMAModel::getStationaryProcess(std::vector<double> & pre_sample_series,
+									  std::vector<double> & pre_sample_innovations,
+									  double* series, double* innovations,
+									  unsigned int size)
+{
+
+	unsigned int i;
+
+	unsigned int sample_size = pre_sample_series.size();
+
+	if(beta != 0){ /* subtract deterministic trend */
+
+		for(i=0;i<sample_size;++i)
+		{
+			pre_sample_series[sample_size-i-1] = series[i] - c - beta*(size-i);
+			if(innovations)
+				pre_sample_innovations[sample_size-i-1] = innovations[i];
+		}
+
+
+	}else if(d > 0){ /* eliminate shocastic trend */
+
+		/* THIS CODE NEEDS TO BE FIXED */
+		double* data = new double[size-d];
+
+		difference(series,size,d,data);
+
+		for(i=0;i<sample_size;++i)
+		{
+			pre_sample_series[i] = data[sample_size-i-1];
+			if(innovations)
+				pre_sample_innovations[i] = innovations[sample_size-i-1];
+		}
+
+		delete[] data;
+
+	}else{ /* do nothing */
+
+		for(i=0;i<sample_size;++i)
+		{
+			pre_sample_series[sample_size-i-1] = series[i];
+
+			if(innovations)
+				pre_sample_innovations[sample_size-i-1] = innovations[i];
+		}
+
+	}
+
+}
+
+void ARIMAModel::simulate(std::vector<double> & pre_sample_series,
+						  std::vector<double> & pre_sample_innovations,
+						  struct ForecastParameters & foreParams)
+{
+
+	unsigned int i, j, k;
+
+	std::default_random_engine generator;
+	std::normal_distribution<double> noise(0.0f,sqrt(var));
+
+	unsigned int projection = foreParams.projection;
+	unsigned int trials     = foreParams.trials;
+
+	forecasts.resize(trials,projection);
+
 	for(i=0;i<trials;i++){
 
 		for(j=0;j<projection;j++){
@@ -240,29 +285,53 @@ int ARIMAModel::forecast(double* series, unsigned int size, double* innovations,
 
 			for(k=0;k<p;k++)
 				value +=   psi[k] * pre_sample_series[pre_sample_series.size()-k-1];
-		
+
 			for(k=0;k<q && k<pre_sample_innovations.size();k++)
 				value += theta[k] * pre_sample_innovations[pre_sample_innovations.size()-k-1];
 
 			double e = noise(generator);
-			value += c + beta*(initial_time + j + 1) + e;
-	
+			value += e;
+
 			pre_sample_series.push_back(value);
 			pre_sample_innovations.push_back(e);
 
 			forecasts(i,j) = value;
 		}
+
 		for(j=0;j<projection;j++){
 			pre_sample_series.pop_back();
 			pre_sample_innovations.pop_back();
 		}
 
-		//if(d > 0) undifference(forecasts[i],projection,d,series);
-
 	}
-	
-	return 0;
-	
+}
+
+void ARIMAModel::addTrend(unsigned int start_time, std::vector<double> & pre_sample_series)
+{
+
+	unsigned int i, j;
+
+	if(beta != 0) /* add deterministic trend */
+	{
+		for(i=0;i<foreParams.trials;++i)
+			for(j=0;j<foreParams.projection;++j)
+				forecasts(i,j) += c + beta * double(j + start_time);
+	}
+	else if(d > 0) /* re-integrate series */
+	{
+		for(i=0;i<forecasts.rows();++i)
+		{
+			std::vector<double> forecast = forecasts.row_slice(i,0,forecasts.cols());
+
+			undifference(&(forecast[0]),foreParams.projection,d,&(pre_sample_series[0]));
+
+			for(j=0;j<forecasts.cols();++j)
+			{
+				forecasts(i,j) = forecast[j];
+			}
+		}
+	}
+
 }
 
 void ARIMAModel::getForecast(double* expectation, double* upper, double* lower){
@@ -282,11 +351,11 @@ void ARIMAModel::getForecast(double* expectation, double* upper, double* lower){
 		se = sqrt(variance(sample,foreParams.trials,mean));
 
 		expectation[i] = mean;
-		upper[i] = mean + 1.96*se;
-		lower[i] = mean - 1.96*se;
+		upper[i] = mean + 1.96f*se;
+		lower[i] = mean - 1.96f*se;
 
 		delete[] sample;
-		
+
 	}
 
 }

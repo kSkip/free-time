@@ -136,7 +136,7 @@ int main(int argc, char* argv[]){
 
 	ModelSpec s;
 	s.load(modelfile.c_str());
-	model.setModelSpec(&s);
+	model.setModelSpec(s);
 
 	std::vector<double> data;
 	std::vector<double> innovations;

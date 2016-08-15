@@ -176,8 +176,7 @@ int main(int argc, char* argv[]){
 		}
 	}
 
-	ModelSpec s;
-	models[bestModel].getModelSpec(&s);
+	ModelSpec s = models[bestModel].getModelSpec();
 
 
 	if(opt & FIT_OPT_FILEOUT) s.save(outfile.c_str());

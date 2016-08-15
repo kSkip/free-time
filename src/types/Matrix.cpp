@@ -318,7 +318,7 @@ std::vector<double> Matrix::col_slice(unsigned int col_num, unsigned int first, 
 
 	std::vector<double> col;
 
-	col.assign(values + col_num*num_rows + first,values + col_num*num_rows + second+1);
+	col.assign(values + col_num*num_rows + first, values + col_num*num_rows + second + 1);
 
 	return col;
 

@@ -28,7 +28,9 @@ struct ForecastParameters{
 };
 
 class ModelSpec{
+
 	public:
+
 		ModelSpec();
 
 		unsigned int p, d, q;
@@ -42,24 +44,31 @@ class ModelSpec{
 		
 		int save(const char* filename);
 		int load(const char* filename);
+
 };
 
 class ARIMAModel{
+
 	public:
+
 		ARIMAModel();
 		ARIMAModel(unsigned int p, unsigned int d, unsigned int q);
 		ARIMAModel(const ARIMAModel & rhs);
 		~ARIMAModel();
 
 		int fit(double* series, unsigned int size, double* residuals, unsigned short opt);
-		void getModelSpec(ModelSpec* specs);
-		void setModelSpec(ModelSpec* specs);
+
+		ModelSpec getModelSpec();
+		void setModelSpec(const ModelSpec & specs);
 		double getAIC(){ return AIC; }
 
 		int forecast(double* series, unsigned int size, double* innovations, int initial_time);
+
 		void getForecast(double* expectation, double* upper, double* lower);
 		void setForecastParams(struct ForecastParameters* params);
+
 	protected:
+
 		unsigned int p, d, q;
 		std::vector<double> psi;
 		std::vector<double> theta;
@@ -71,6 +80,18 @@ class ARIMAModel{
 
 		Matrix forecasts;
 		struct ForecastParameters foreParams;
+
+		void getStationaryProcess(std::vector<double> & pre_sample_series,
+								  std::vector<double> & pre_sample_innovations,
+								  double* series, double* innovations,
+								  unsigned int size);
+
+		void simulate(std::vector<double> & pre_sample_series,
+					  std::vector<double> & pre_sample_innovations,
+					  struct ForecastParameters & foreParams);
+
+		void addTrend(unsigned int start_time, std::vector<double> & pre_sample_series);
+
 };
 
 #endif
